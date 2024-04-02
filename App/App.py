@@ -10,6 +10,50 @@ st.set_page_config(
    page_icon='./Logo/recommend.png',
 )
 
+
+
+###### Database Stuffs ######
+
+
+# sql connector
+connection = pymysql.connect(host='localhost',user='root',password='Shubham@2507',db='cv')
+cursor = connection.cursor()
+
+
+def insert_data(sec_token, ip_add, host_name, dev_user, os_name_ver, latlong, city, state, country, act_name, act_mail, act_mob, name, email, res_score, timestamp, no_of_pages, reco_field, cand_level, skills, recommended_skills, courses, pdf_name):
+    DB_table_name = 'user_data'
+    insert_sql = "INSERT INTO " + DB_table_name + " VALUES (0,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+    
+    # Check if email is provided, insert a placeholder if not
+    if not email:
+        email = "N/A"  # Placeholder value for missing email
+    
+    rec_values = (
+        str(sec_token), str(ip_add), host_name, dev_user, os_name_ver, str(latlong),
+        city, state, country, act_name, act_mail, act_mob, name, email, str(res_score),
+        timestamp, str(no_of_pages), reco_field, cand_level, skills, recommended_skills,
+        courses, pdf_name
+    )
+    
+    try:
+        cursor.execute(insert_sql, rec_values)
+        connection.commit()
+        print("Data inserted successfully!")
+    except pymysql.Error as e:
+        connection.rollback()
+        print(f"Error inserting data: {e}")
+
+
+
+# inserting feedback data into user_feedback table
+def insertf_data(feed_name,feed_email,feed_score,comments,Timestamp):
+    DBf_table_name = 'user_feedback'
+    insertfeed_sql = "insert into " + DBf_table_name + """
+    values (0,%s,%s,%s,%s,%s)"""
+    rec_values = (feed_name, feed_email, feed_score, comments, Timestamp)
+    cursor.execute(insertfeed_sql, rec_values)
+    connection.commit()
+
 #Main function
 def run():
     
@@ -75,6 +119,62 @@ def run():
         </p>
 
         ''',unsafe_allow_html=True)  
+
+
+###### Creating Database and Table ######
+
+
+    # Create the DB
+    db_sql = """CREATE DATABASE IF NOT EXISTS CV;"""
+    cursor.execute(db_sql)
+
+
+    # Create table user_data and user_feedback
+    DB_table_name = 'user_data'
+    table_sql = "CREATE TABLE IF NOT EXISTS " + DB_table_name + """
+                    (ID INT NOT NULL AUTO_INCREMENT,
+                    sec_token varchar(20) NOT NULL,
+                    ip_add varchar(50) NULL,
+                    host_name varchar(50) NULL,
+                    dev_user varchar(50) NULL,
+                    os_name_ver varchar(50) NULL,
+                    latlong varchar(50) NULL,
+                    city varchar(50) NULL,
+                    state varchar(50) NULL,
+                    country varchar(50) NULL,
+                    act_name varchar(50) NOT NULL,
+                    act_mail varchar(50) NOT NULL,
+                    act_mob varchar(20) NOT NULL,
+                    Name varchar(500) NOT NULL,
+                    Email_ID VARCHAR(500) NOT NULL,
+                    resume_score VARCHAR(8) NOT NULL,
+                    Timestamp VARCHAR(50) NOT NULL,
+                    Page_no VARCHAR(5) NOT NULL,
+                    Predicted_Field BLOB NOT NULL,
+                    User_level BLOB NOT NULL,
+                    Actual_skills BLOB NOT NULL,
+                    Recommended_skills BLOB NOT NULL,
+                    Recommended_courses BLOB NOT NULL,
+                    pdf_name varchar(50) NOT NULL,
+                    PRIMARY KEY (ID)
+                    );
+                """
+    cursor.execute(table_sql)
+
+
+    DBf_table_name = 'user_feedback'
+    tablef_sql = "CREATE TABLE IF NOT EXISTS " + DBf_table_name + """
+                    (ID INT NOT NULL AUTO_INCREMENT,
+                        feed_name varchar(50) NOT NULL,
+                        feed_email VARCHAR(50) NOT NULL,
+                        feed_score VARCHAR(5) NOT NULL,
+                        comments VARCHAR(100) NULL,
+                        Timestamp VARCHAR(50) NOT NULL,
+                        PRIMARY KEY (ID)
+                    );
+                """
+    cursor.execute(tablef_sql)
+
    
 run()
 
