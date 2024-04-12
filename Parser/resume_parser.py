@@ -6,7 +6,6 @@ import pprint
 from spacy.matcher import Matcher
 from . import utils
 
-
 class ResumeParser(object):
 
     def __init__(
