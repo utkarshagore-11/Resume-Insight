@@ -62,7 +62,6 @@ def pdf_reader(file):
 if 'state' not in st.session_state:
     st.session_state.state = None
 
-    
 
 #show uploaded file path to view pdf display
 def show_pdf(file_path):
@@ -161,9 +160,6 @@ def show_pdf(file_path):
     st.markdown(pdf_display, unsafe_allow_html=True)
 
 
-
-
-
 def insert_data(sec_token, ip_add, host_name, dev_user, os_name_ver, latlong, city, state, country, act_name, act_mail, act_mob, name, email, res_score, timestamp, no_of_pages, reco_field, cand_level, skills, recommended_skills, courses, pdf_name):
     DB_table_name = 'user_data'
     insert_sql = "INSERT INTO " + DB_table_name + " VALUES (0,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
@@ -196,6 +192,8 @@ def insertf_data(feed_name,feed_email,feed_score,comments,Timestamp):
     cursor.execute(insertfeed_sql, rec_values)
     connection.commit()
 
+# Initialize plotfeed_data as None
+plotfeed_data = None
 
 #Page Configuration
 st.set_page_config(
@@ -607,29 +605,49 @@ def run():
                     st.success("Thanks! Your Feedback was recorded.") 
 
             #fetch data from user feedback table
-            query = 'select * from user_feedback'        
+            #query = 'select * from user_feedback'        
             #plotfeed_data = pd.read_sql(query, connection)                        
+            try:
+            # Example: Fetching data from a database
+                query = 'SELECT * FROM user_feedback'
+                cursor.execute(query)
+                plotfeed_data = cursor.fetchall()  # Assign fetched data to plotfeed_data
+    
+            except Exception as e:
+                st.error(f"Error fetching data: {e}")
+                plotfeed_data = []  # Assign an empty list if data retrieval fails
 
+            if plotfeed_data:
+                # Extract feed_score values from plotfeed_data tuples
+                feed_scores = [row[3] for row in plotfeed_data]  # Assuming feed_score is at index 2
 
-            #unique values and total value count 
-            labels = plotfeed_data.feed_score.unique()
-            values = plotfeed_data.feed_score.value_counts()
+                # Create a Pandas Series from the extracted feed_scores
+                feed_scores_series = pd.Series(feed_scores)
 
+                # Calculate value counts to prepare for plotting
+                value_counts = feed_scores_series.value_counts()
 
-            #plotting pie chart for user ratings
-            st.subheader("**Past User Rating's**")
-            fig = px.pie(values=values, names=labels, title="Chart of User Rating Score From 1 - 5", color_discrete_sequence=px.colors.sequential.Aggrnyl)
-            st.plotly_chart(fig)
+                # Plotting pie chart for user ratings
+                st.subheader("**Past User Ratings**")
+                fig = px.pie(
+                    values=value_counts.values, 
+                    names=value_counts.index, 
+                    title="User Rating Scores (1-5)", 
+                    color_discrete_sequence=px.colors.sequential.Aggrnyl
+                )
+                st.plotly_chart(fig)
 
+                # Fetching comment history
+                comments = [(row[1], row[4]) for row in plotfeed_data]  # Assuming feed_name at index 0 and comments at index 3
 
-            #fetching comment history
-            cursor.execute('select feed_name, comments from user_feedback')
-            plfeed_cmt_data = cursor.fetchall()
+                st.subheader("**User Comments**")
+                dff = pd.DataFrame(comments, columns=['User', 'Comment'])
+                st.dataframe(dff, width=1000)
+            else:
+                # Handle case where plotfeed_data is empty or not retrieved successfully
+                st.warning("No user feedback data available.")
 
-            st.subheader("**User Comment's**")
-            dff = pd.DataFrame(plfeed_cmt_data, columns=['User', 'Comment'])
-            st.dataframe(dff, width=1000)
-        
+                                
     if selection == "Admin":
         if st.session_state.state != 'admin_logged_in':
             #Admin Login
@@ -652,19 +670,19 @@ def run():
 
                     # Implement your admin dashboard logic here
                     #cursor = connection.cursor()
-  
+                    # Fetch user data based on filter option 
                     cursor.execute('''SELECT ID, ip_add, resume_score, convert(Predicted_Field using utf8), convert(User_level using utf8), city, state, country from user_data''')
                     datanalys = cursor.fetchall()
                     plot_data = pd.DataFrame(datanalys, columns=['Idt', 'IP_add', 'resume_score', 'Predicted_Field', 'User_Level', 'City', 'State', 'Country'])
                         
-                    cursor.execute('''SELECT ID, sec_token, ip_add, act_name, act_mail, act_mob, convert(Predicted_Field using utf8), Timestamp, Name, Email_ID, resume_score, Page_no, pdf_name, convert(User_level using utf8), convert(Actual_skills using utf8), convert(Recommended_skills using utf8), convert(Recommended_courses using utf8), city, state, country, latlong, os_name_ver, host_name, dev_user from user_data''')
+                    cursor.execute('''SELECT act_name, ID, act_mail, act_mob, convert(Predicted_Field using utf8), Name, Email_ID, resume_score, Page_no, pdf_name, convert(User_level using utf8), convert(Actual_skills using utf8), convert(Recommended_skills using utf8), convert(Recommended_courses using utf8), city, state, country from user_data''')
                     data = cursor.fetchall()                
 
                     st.header("**User's Data**")
-                    df = pd.DataFrame(data, columns=['ID', 'Token', 'IP Address', 'Name', 'Mail', 'Mobile Number', 'Predicted Field', 'Timestamp',
+                    df = pd.DataFrame(data, columns=['Name', 'ID', 'Mail', 'Mobile Number', 'Predicted Field',
                                                     'Predicted Name', 'Predicted Mail', 'Resume Score', 'Total Page',  'File Name',   
                                                     'User Level', 'Actual Skills', 'Recommended Skills', 'Recommended Course',
-                                                    'City', 'State', 'Country', 'Lat Long', 'Server OS', 'Server Name', 'Server User',])
+                                                    'City', 'State', 'Country'])
                     
                     #View the dataframe
                     st.dataframe(df)
@@ -736,6 +754,57 @@ def run():
                     st.subheader("**Pie-Chart for State**")
                     fig = px.pie(df, values=values, names=labels, title='Usage Based on State ', color_discrete_sequence=px.colors.sequential.PuBu_r)
                     st.plotly_chart(fig)
+
+                    # Fetch user data based on filter option
+                    filter_option = st.selectbox("Filter by:", ['Resume Score', 'Predicted Field', 'User Level'])
+
+                    if filter_option == 'Resume Score':
+                        cursor.execute('''
+                            SELECT  act_name, ID, act_mail, act_mob,
+                            convert(User_level using utf8),  convert(Predicted_Field using utf8), resume_score,
+                            convert(Actual_skills using utf8), convert(Recommended_skills using utf8)
+                            FROM user_data
+                            ORDER BY resume_score DESC
+                        ''')
+                        data = cursor.fetchall()
+                        
+                        columns = ['Name', 'ID', 'Email',' Mobile', 'User Level', 'Predicted Field', 'Resume Score',
+                                'Actual Skills', 'Recommended Skills'
+                                ]
+
+                    elif filter_option == 'Predicted Field':
+                        cursor.execute('''
+                            SELECT  act_name, ID, act_mail, act_mob,
+                            convert(User_level using utf8),  convert(Predicted_Field using utf8), resume_score,
+                            convert(Actual_skills using utf8), convert(Recommended_skills using utf8)
+                            FROM user_data
+                            ORDER BY convert(Predicted_Field using utf8)
+                        ''')
+                        data = cursor.fetchall()
+                        
+                        columns = ['Name', 'ID', 'Email',' Mobile', 'User Level', 'Predicted Field', 'Resume Score',
+                                'Actual Skills', 'Recommended Skills']
+
+                    elif filter_option == 'User Level':
+                        cursor.execute('''
+                            SELECT  act_name, ID, act_mail, act_mob,
+                            convert(User_level using utf8),  convert(Predicted_Field using utf8), resume_score,
+                            convert(Actual_skills using utf8), convert(Recommended_skills using utf8)
+                            FROM user_data
+                            ORDER BY FIELD(convert(User_level using utf8), 'Experience', 'Intermediate', 'Fresher')
+                        ''')
+                        data = cursor.fetchall()
+                        
+                        columns = ['Name', 'ID', 'Email',' Mobile', 'User Level', 'Predicted Field', 'Resume Score',
+                                'Actual Skills', 'Recommended Skills']
+
+                    # Create DataFrame from fetched data
+                    df = pd.DataFrame(data, columns=columns)
+
+                    # Display DataFrame
+                    st.header(f"User's Data - Sorted by {filter_option}")
+                    st.dataframe(df)
+
 
                     #connection.close()
                     
