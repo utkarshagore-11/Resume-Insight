@@ -142,7 +142,7 @@ def display_pdf_for_id():
                 st.success(f"Found PDF for ID: {id_value}")
 
                 # Display the PDF below the submit button
-                pdf_file_path = os.path.join('Uploaded_Resumes/', pdf_name)
+                pdf_file_path = os.path.join('uploaded_resumes/', pdf_name)
                 if os.path.exists(pdf_file_path):
                     show_pdf(pdf_file_path)
                 else:
@@ -248,7 +248,7 @@ def run():
                     time.sleep(4)
         
                 #saving the uploaded resume to folder
-                save_image_path = './Uploaded_Resumes/'+pdf_file.name
+                save_image_path = './uploaded_resumes/'+pdf_file.name
                 pdf_name = pdf_file.name
                 with open(save_image_path, "wb") as f:
                     f.write(pdf_file.getbuffer())
